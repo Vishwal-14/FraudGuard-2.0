@@ -2,24 +2,27 @@ import streamlit as st
 import pandas as pd
 import joblib
 import plotly.graph_objects as go
-import plotly.express as px
 import os
 import json
 import numpy as np
+import pathlib
+from sklearn.model_selection import train_test_split
 
-# ── PAGE CONFIG ──────────────────────────────────────────────────────────────
+# ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="FraudGuard AI V3 | MLOps Console",
+    page_title="FraudGuard 2.0 | MLOps Console",
     page_icon="🛡️",
     layout="wide"
 )
+
+# ── BASE DIR — anchor all file paths to this script's location ────────────────
+BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Syne:wght@300;400;600&display=swap');
 
-/* ── Base ── */
 .stApp {
     background:
         linear-gradient(135deg, rgba(2, 6, 18, 0.95) 0%, rgba(6, 12, 35, 0.93) 100%),
@@ -32,14 +35,12 @@ st.markdown("""
 * { font-family: 'Syne', sans-serif; }
 h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
 
-/* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: rgba(4, 8, 20, 0.97) !important;
     border-right: 1px solid rgba(251, 191, 36, 0.15);
 }
 [data-testid="stSidebar"] * { font-family: 'Syne', sans-serif; }
 
-/* ── Glass panels ── */
 .glass {
     background: rgba(10, 18, 40, 0.7);
     border: 1px solid rgba(251, 191, 36, 0.15);
@@ -54,11 +55,7 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
     box-shadow: 0 0 24px rgba(251, 191, 36, 0.06);
 }
 
-/* ── Hero ── */
-.hero {
-    text-align: center;
-    padding: 56px 0 40px;
-}
+.hero { text-align: center; padding: 56px 0 40px; }
 .hero-title {
     font-family: 'Orbitron', sans-serif;
     font-size: 3.6rem;
@@ -89,7 +86,6 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
     margin-top: 12px;
 }
 
-/* ── Metric cards ── */
 .metric-card {
     background: rgba(10, 18, 40, 0.8);
     border: 1px solid rgba(251, 191, 36, 0.1);
@@ -97,125 +93,51 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
     padding: 18px 20px;
     text-align: center;
 }
-.metric-label {
-    color: #64748B;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
-}
-.metric-value {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #FFFFFF;
-}
+.metric-label { color: #64748B; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.metric-value { font-family: 'Orbitron', sans-serif; font-size: 1.9rem; font-weight: 700; color: #FFFFFF; }
 .metric-sub { color: #FCD34D; font-size: 0.75rem; margin-top: 4px; }
 
-/* ── Status alerts ── */
 .status-fraud {
     font-family: 'Orbitron', sans-serif;
-    color: #F43F5E;
-    font-size: 1.6rem;
-    font-weight: 700;
+    color: #F43F5E; font-size: 1.6rem; font-weight: 700;
     text-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
     animation: pulse-red 1.8s infinite;
 }
 .status-safe {
     font-family: 'Orbitron', sans-serif;
-    color: #10B981;
-    font-size: 1.6rem;
-    font-weight: 700;
+    color: #10B981; font-size: 1.6rem; font-weight: 700;
     text-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
-@keyframes pulse-red {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.55; }
-}
+@keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 
-/* ── MLOps table ── */
-.mlops-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
+.mlops-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .mlops-table th {
-    color: #64748B;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(251, 191, 36, 0.1);
-    text-align: left;
+    color: #64748B; font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 1.5px; padding: 8px 12px;
+    border-bottom: 1px solid rgba(251, 191, 36, 0.1); text-align: left;
 }
-.mlops-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    color: #CBD5E1;
-}
+.mlops-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #CBD5E1; }
 .mlops-table tr:hover td { background: rgba(34, 211, 238, 0.04); }
 .champion-row td { color: #FFFFFF; background: rgba(251, 191, 36, 0.05); }
 
-/* ── Pipeline steps ── */
-.pipeline {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    margin: 16px 0;
-}
-.pipe-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    flex: 1;
-}
+.pipeline { display: flex; align-items: center; gap: 0; margin: 16px 0; }
+.pipe-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
 .pipe-dot {
-    width: 32px; height: 32px;
-    border-radius: 50%;
+    width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-family: 'Orbitron', sans-serif; font-size: 0.75rem; font-weight: 700;
 }
 .pipe-dot-blue  { background: rgba(59,130,246,0.2);  border: 1px solid #3B82F6; color: #3B82F6; }
 .pipe-dot-cyan  { background: rgba(34,211,238,0.2);  border: 1px solid #22D3EE; color: #22D3EE; }
 .pipe-dot-amber { background: rgba(245,158,11,0.2);  border: 1px solid #F59E0B; color: #F59E0B; }
 .pipe-dot-green { background: rgba(16,185,129,0.2);  border: 1px solid #10B981; color: #10B981; }
-.pipe-label {
-    font-size: 0.65rem;
-    color: #64748B;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    max-width: 70px;
-    line-height: 1.3;
-}
-.pipe-line {
-    flex: 1;
-    height: 1px;
-    background: rgba(251,191,36,0.2);
-    margin-bottom: 22px;
-}
+.pipe-label { font-size: 0.65rem; color: #64748B; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; max-width: 70px; line-height: 1.3; }
+.pipe-line { flex: 1; height: 1px; background: rgba(251,191,36,0.2); margin-bottom: 22px; }
 
-/* ── Badge ── */
 .badge-champion {
-    background: rgba(251,191,36,0.12);
-    border: 1px solid rgba(251,191,36,0.3);
-    color: #FCD34D;
-    font-size: 0.65rem;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-family: 'Orbitron', sans-serif;
-    letter-spacing: 1px;
-}
-.badge-healthy {
-    background: rgba(16,185,129,0.12);
-    border: 1px solid rgba(16,185,129,0.3);
-    color: #10B981;
-    font-size: 0.65rem;
-    padding: 2px 10px;
-    border-radius: 20px;
+    background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3);
+    color: #FCD34D; font-size: 0.65rem; padding: 2px 10px;
+    border-radius: 20px; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -223,67 +145,32 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
 
 # ── LOAD RESOURCES ────────────────────────────────────────────────────────────
 @st.cache_resource
-
 def load_resources():
-
     model = scaler = df = None
-
     error = None
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    model_path    = BASE_DIR / "registered_models" / "v3_xgb_20260421_0024.joblib"
+    scaler_path   = BASE_DIR / "registered_models" / "v3_scaler_20260421_0024.joblib"
+    registry_path = BASE_DIR / "model_registry.json"
+    RAW_CSV       = BASE_DIR / "creditcard.csv"
 
-
-
-    # V3 champion model
-
-    model_path  = os.path.join("registered_models", "v3_xgb_20260421_0024.joblib")
-
-    scaler_path = os.path.join("registered_models", "v3_scaler_20260421_0024.joblib")
-
-
-
-    # Fallback: check model_registry.json
-
-    registry_path = os.path.join(BASE_DIR, "model_registry.json")
-
-
-
-    if not os.path.exists(model_path) and os.path.exists("model_registry.json"):
-
-        with open("model_registry.json") as f:
-
+    # Fallback to registry if default model path doesn't exist
+    if not model_path.exists() and registry_path.exists():
+        with open(registry_path) as f:
             reg = json.load(f)
+        model_path  = BASE_DIR / reg.get("model_path", "")
+        scaler_path = BASE_DIR / reg.get("scaler_path", "")
 
-        model_path  = reg.get("model_path", model_path)
-
-        scaler_path = reg.get("scaler_path", scaler_path)
-
-
-
-    if os.path.exists(model_path):
-
+    if model_path.exists():
         model = joblib.load(model_path)
-
     else:
-
         error = f"Model not found at {model_path}"
 
-
-
-    if os.path.exists(scaler_path):
-
+    if scaler_path.exists():
         scaler = joblib.load(scaler_path)
 
-        
-
-         # Load raw CSV
-
-    from sklearn.model_selection import train_test_split
-
-    RAW_CSV = os.path.join(BASE_DIR, "creditcard.csv")
-    
     try:
-        if os.path.exists(RAW_CSV):
+        if RAW_CSV.exists():
             raw = pd.read_csv(RAW_CSV)
             subset = [c for c in raw.columns if c not in ["Time", "Class"]]
             raw.drop_duplicates(subset=subset, inplace=True)
@@ -295,35 +182,18 @@ def load_resources():
             )
             df = df.reset_index(drop=True)
         else:
-            error = "creditcard.csv not found"
+            error = f"creditcard.csv not found at {RAW_CSV}"
             df = None
     except Exception as e:
         error = f"Dataset error: {str(e)}"
         df = None
 
-    # Test dataset
-      # Load raw CSV and recreate same test split as notebook
-    from sklearn.model_selection import train_test_split
-    RAW_CSV = r"C:\Users\vishw\Desktop\projects\mini projects aiml\credit_card\creditcard.csv"
-    if os.path.exists(RAW_CSV):
-        raw = pd.read_csv(RAW_CSV)
-        subset = [c for c in raw.columns if c not in ["Time", "Class"]]
-        raw.drop_duplicates(subset=subset, inplace=True)
-        _, df, _, _ = train_test_split(
-            raw, raw["Class"],
-            test_size=0.20,
-            random_state=42,
-            stratify=raw["Class"]
-        )
-        df = df.reset_index(drop=True)
-    else:
-        error = "creditcard.csv not found"
     return model, scaler, df, error
 
 model, scaler, dataset, load_error = load_resources()
 
 
-# ── FEATURE ENGINEERING (matches V3 notebook exactly) ────────────────────────
+# ── FEATURE ENGINEERING ───────────────────────────────────────────────────────
 def engineer_features(raw_df):
     df = raw_df.copy()
     if "Time" in df.columns:
@@ -344,16 +214,18 @@ def engineer_features(raw_df):
     return df
 
 
-# ── LOAD EXPERIMENT LOG ───────────────────────────────────────────────────────
+# ── LOAD EXPERIMENT LOG & REGISTRY ───────────────────────────────────────────
 def load_experiment_log():
     for name in ["experiment_tracking_v3.csv", "experiment_tracking.csv"]:
-        if os.path.exists(name):
-            return pd.read_csv(name)
+        path = BASE_DIR / name
+        if path.exists():
+            return pd.read_csv(path)
     return None
 
 def load_registry():
-    if os.path.exists("model_registry.json"):
-        with open("model_registry.json") as f:
+    path = BASE_DIR / "model_registry.json"
+    if path.exists():
+        with open(path) as f:
             return json.load(f)
     return None
 
@@ -429,7 +301,6 @@ if page == "🏠 OVERVIEW":
             - Saves champion path + threshold to `model_registry.json`
             """)
 
-
     with col2:
         with st.expander("🛠️ HOW TO USE", expanded=True):
             st.markdown("""
@@ -472,7 +343,6 @@ if page == "🏠 OVERVIEW":
             PCA transforms them into anonymous mathematical vectors — the model learns
             **behavioural patterns** without ever seeing private information.
             """)
-      
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -483,13 +353,12 @@ elif page == "📡 LIVE MONITOR":
         st.error(f"❌ {load_error}")
         st.stop()
 
-    # Top metrics
     m1, m2, m3, m4 = st.columns(4)
     metrics = [
-        ("AUPRC Score",     "0.8427", "V3 Champion"),
-        ("Fraud Recall",    "74.7%",  "At threshold 0.5"),
-        ("Precision",       "99.0%",  "False alarm rate: 0.002%"),
-        ("System Status",   "ONLINE", "● Latency: 8ms (Simulated)"),
+        ("AUPRC Score",   "0.8427", "V3 Champion"),
+        ("Fraud Recall",  "74.7%",  "At threshold 0.5"),
+        ("Precision",     "99.0%",  "False alarm rate: 0.002%"),
+        ("System Status", "ONLINE", "● Latency: 8ms (Simulated)"),
     ]
     for col, (label, value, sub) in zip([m1, m2, m3, m4], metrics):
         with col:
@@ -508,7 +377,7 @@ elif page == "📡 LIVE MONITOR":
         st.markdown("#### 📥 INGEST TRAFFIC")
 
         if dataset is None:
-            st.warning("No test dataset found. Place `test_dataset.csv` in the same folder.")
+            st.warning("Dataset not loaded. Check logs for details.")
         else:
             b1, b2 = st.columns(2)
             with b1:
@@ -521,12 +390,10 @@ elif page == "📡 LIVE MONITOR":
                     st.session_state["txn"] = fraud.sample(1).reset_index(drop=True)
 
         if "txn" in st.session_state:
-            row = st.session_state["txn"]
+            row    = st.session_state["txn"]
             actual = int(row["Class"].values[0])
 
-            # Feature engineering + scale
-            X_raw = row.copy()
-            X_engineered = engineer_features(X_raw)
+            X_engineered = engineer_features(row.copy())
             if scaler:
                 X_ready = pd.DataFrame(
                     scaler.transform(X_engineered),
@@ -538,7 +405,6 @@ elif page == "📡 LIVE MONITOR":
             prob_fraud = model.predict_proba(X_ready)[0][1]
             is_fraud   = prob_fraud >= threshold
 
-            # Result panel
             st.markdown('<div class="glass">', unsafe_allow_html=True)
             st.caption("ANALYSIS RESULT")
 
@@ -551,7 +417,6 @@ elif page == "📡 LIVE MONITOR":
                 st.markdown(f"**Safety Score:** <span style='color:#10B981;font-size:1.4rem;'>{(1-prob_fraud):.1%}</span>", unsafe_allow_html=True)
                 st.success("Action: Transaction Approved.")
 
-            # Ground truth check
             match = (is_fraud and actual == 1) or (not is_fraud and actual == 0)
             if match:
                 st.caption(f"✓ Verified Match (Historical: {'Fraud' if actual == 1 else 'Normal'})")
@@ -579,7 +444,6 @@ elif page == "📡 LIVE MONITOR":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Engineered features info
             with st.expander("🔬 V3 ENGINEERED FEATURES"):
                 eng_cols = ["Hour_of_Day", "IS_NIGHT", "LOG_AMOUNT", "AMOUNT_TIER"]
                 eng_vals = {c: X_engineered[c].values[0] for c in eng_cols if c in X_engineered.columns}
@@ -589,59 +453,36 @@ elif page == "📡 LIVE MONITOR":
     with col_viz:
         if "txn" in st.session_state:
             st.markdown("#### 📊 FEATURE DEVIATION PROFILE")
-
-            # Horizontal bar chart — signed deviations, colour coded by direction
-            row = st.session_state["txn"]
+            row      = st.session_state["txn"]
             pca_cols = [c for c in row.columns if c.startswith("V")]
             data_dict = {c: row[c].values[0] for c in pca_cols}
             sorted_feats = sorted(data_dict.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
             labels = [x[0] for x in sorted_feats]
             values = [x[1] for x in sorted_feats]
-
             bar_colors = ["#F43F5E" if v > 0 else "#22D3EE" for v in values]
 
             fig = go.Figure(go.Bar(
-                x=values,
-                y=labels,
-                orientation="h",
-                marker=dict(
-                    color=bar_colors,
-                    opacity=0.85,
-                    line=dict(width=0)
-                ),
+                x=values, y=labels, orientation="h",
+                marker=dict(color=bar_colors, opacity=0.85, line=dict(width=0)),
                 text=[f"{v:+.2f}" for v in values],
                 textposition="outside",
                 textfont=dict(color="#94A3B8", size=10),
             ))
             fig.add_vline(x=0, line_width=1, line_color="rgba(255,255,255,0.15)")
             fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#94A3B8", family="Syne"),
-                xaxis=dict(
-                    showgrid=True,
-                    gridcolor="rgba(255,255,255,0.05)",
-                    zeroline=False,
-                    color="#475569"
-                ),
-                yaxis=dict(
-                    showgrid=False,
-                    color="#CBD5E1",
-                    autorange="reversed"
-                ),
-                margin=dict(l=10, r=60, t=10, b=10),
-                height=380,
-                showlegend=False,
+                xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, color="#475569"),
+                yaxis=dict(showgrid=False, color="#CBD5E1", autorange="reversed"),
+                margin=dict(l=10, r=60, t=10, b=10), height=380, showlegend=False,
             )
             st.plotly_chart(fig, use_container_width=True)
             st.markdown(
                 '<div style="display:flex;gap:20px;justify-content:center;margin-top:4px;">'
-                '<span style="color:#F43F5E;font-size:0.72rem;">● Positive deviation (above normal)</span>'
-                '<span style="color:#22D3EE;font-size:0.72rem;">● Negative deviation (below normal)</span>'
-                '</div>',
-                unsafe_allow_html=True
+                '<span style="color:#F43F5E;font-size:0.72rem;">● Positive deviation</span>'
+                '<span style="color:#22D3EE;font-size:0.72rem;">● Negative deviation</span>'
+                '</div>', unsafe_allow_html=True
             )
-
             with st.expander("🔍 RAW DATA STREAM"):
                 display_cols = [c for c in row.columns if c not in ["Class", "Unnamed: 0"]]
                 st.dataframe(row[display_cols])
@@ -656,12 +497,10 @@ elif page == "📡 LIVE MONITOR":
             """, unsafe_allow_html=True)
 
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 3 — MLOPS CONSOLE
 # ══════════════════════════════════════════════════════════════════════════════
 elif page == "🧬 MLOPS CONSOLE":
-
     st.markdown("""
     <div class="hero" style="padding: 36px 0 28px;">
         <div class="hero-title" style="font-size:2.4rem;">MLOPS CONSOLE</div>
@@ -669,80 +508,57 @@ elif page == "🧬 MLOPS CONSOLE":
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Champion banner ──
     registry = load_registry()
     if registry:
         c1, c2, c3, c4 = st.columns(4)
         champ_metrics = [
-            ("CHAMPION MODEL",   registry.get("champion_version", "—"),  "Currently serving"),
-            ("BEST AUPRC",       str(registry.get("best_auprc", "—")),   "Across all runs"),
-            ("NET ROI",          f"${registry.get('net_roi', 0):,.2f}",  "Test set"),
-            ("REGISTERED",       registry.get("registered_at", "—")[:10], "Date"),
+            ("CHAMPION MODEL", registry.get("champion_version", "—"), "Currently serving"),
+            ("BEST AUPRC",     str(registry.get("best_auprc", "—")), "Across all runs"),
+            ("NET ROI",        f"${registry.get('net_roi', 0):,.2f}", "Test set"),
+            ("REGISTERED",     registry.get("registered_at", "—")[:10], "Date"),
         ]
         for col, (label, value, sub) in zip([c1, c2, c3, c4], champ_metrics):
             with col:
                 st.markdown(f"""
-                <div class="metric-card" style="border-color:rgba(34,211,238,0.25);">
+                <div class="metric-card" style="border-color:rgba(251,191,36,0.25);">
                     <div class="metric-label">{label}</div>
                     <div class="metric-value" style="font-size:1.3rem;">{value}</div>
                     <div class="metric-sub">{sub}</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("No model_registry.json found. Run the V3 training notebook to register a champion.")
+        st.info("No model_registry.json found.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Pipeline diagram ──
     st.markdown('<div class="glass">', unsafe_allow_html=True)
     st.markdown("**MLOps Pipeline — every training run follows this flow:**")
     st.markdown("""
     <div class="pipeline">
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-blue">1</div>
-            <div class="pipe-label">Load &amp; Clean Data</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-blue">1</div><div class="pipe-label">Load &amp; Clean Data</div></div>
         <div class="pipe-line"></div>
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-blue">2</div>
-            <div class="pipe-label">Feature Engineering</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-blue">2</div><div class="pipe-label">Feature Engineering</div></div>
         <div class="pipe-line"></div>
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-cyan">3</div>
-            <div class="pipe-label">Train XGBoost</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-cyan">3</div><div class="pipe-label">Train XGBoost</div></div>
         <div class="pipe-line"></div>
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-amber">4</div>
-            <div class="pipe-label">Guardrail Checks</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-amber">4</div><div class="pipe-label">Guardrail Checks</div></div>
         <div class="pipe-line"></div>
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-green">5</div>
-            <div class="pipe-label">Register if Champion</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-green">5</div><div class="pipe-label">Register if Champion</div></div>
         <div class="pipe-line"></div>
-        <div class="pipe-step">
-            <div class="pipe-dot pipe-dot-cyan">6</div>
-            <div class="pipe-label">Log to Tracker</div>
-        </div>
+        <div class="pipe-step"><div class="pipe-dot pipe-dot-cyan">6</div><div class="pipe-label">Log to Tracker</div></div>
     </div>
     <div style="font-size:0.72rem;color:#475569;margin-top:8px;">
         Step 4 — model is rejected if AUPRC &lt; 0.75, Recall &lt; 70%, or FP Rate &gt; 0.5%.
-        Rejected models are logged but never registered as champion.
     </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Guardrails ──
     g1, g2, g3 = st.columns(3)
-    guardrails = [
-        ("MIN AUPRC",    "0.75", "V3 scores 0.8427 — ✅ passes"),
-        ("MIN RECALL",   "70%",  "V3 scores 74.7% — ✅ passes"),
-        ("MAX FP RATE",  "<0.5%","V3 at 0.002% — ✅ passes"),
-    ]
-    for col, (label, val, note) in zip([g1, g2, g3], guardrails):
+    for col, (label, val, note) in zip([g1, g2, g3], [
+        ("MIN AUPRC",   "0.75", "V3 scores 0.8427 — ✅ passes"),
+        ("MIN RECALL",  "70%",  "V3 scores 74.7% — ✅ passes"),
+        ("MAX FP RATE", "<0.5%","V3 at 0.002% — ✅ passes"),
+    ]):
         with col:
             st.markdown(f"""
             <div class="glass" style="text-align:center;border-color:rgba(16,185,129,0.2);">
@@ -752,51 +568,41 @@ elif page == "🧬 MLOPS CONSOLE":
             </div>
             """, unsafe_allow_html=True)
 
-    # ── Experiment log ──
     st.markdown("<br>", unsafe_allow_html=True)
     log = load_experiment_log()
 
     if log is not None and not log.empty:
         st.markdown("#### Experiment Log")
 
-        # AUPRC trend chart
         if "AUPRC" in log.columns and "Version" in log.columns:
             fig_line = go.Figure()
             fig_line.add_trace(go.Scatter(
-                x=log["Version"],
-                y=log["AUPRC"],
+                x=log["Version"], y=log["AUPRC"],
                 mode="lines+markers",
-                line=dict(color="#22D3EE", width=2),
-                marker=dict(size=8, color="#22D3EE",
-                            line=dict(color="#0A1228", width=2)),
-                fill="tozeroy",
-                fillcolor="rgba(34,211,238,0.06)"
+                line=dict(color="#F59E0B", width=2),
+                marker=dict(size=8, color="#F59E0B", line=dict(color="#0A1228", width=2)),
+                fill="tozeroy", fillcolor="rgba(245,158,11,0.06)"
             ))
             fig_line.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#94A3B8", family="Syne"),
                 xaxis=dict(showgrid=False, color="#475569"),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.04)",
-                           range=[0.75, 1.0], color="#475569"),
-                margin=dict(l=20, r=20, t=20, b=20),
-                height=200,
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.04)", range=[0.75, 1.0], color="#475569"),
+                margin=dict(l=20, r=20, t=20, b=20), height=200,
             )
             st.plotly_chart(fig_line, use_container_width=True)
 
-        # Table
         display_cols = [c for c in [
             "Timestamp", "Version", "n_estimators", "max_depth",
             "AUPRC", "Recall", "FP_Rate", "Net_ROI_USD", "Health_Status"
         ] if c in log.columns]
 
         champion_version = registry.get("champion_version", "") if registry else ""
-
         rows_html = ""
         for _, row in log[display_cols].iterrows():
             version_str = str(row.get("Version", ""))
-            is_champ = champion_version in version_str
-            row_class = "champion-row" if is_champ else ""
+            is_champ    = champion_version in version_str
+            row_class   = "champion-row" if is_champ else ""
             cells = ""
             for col in display_cols:
                 val = row[col]
@@ -823,145 +629,78 @@ elif page == "🧬 MLOPS CONSOLE":
         </div>
         """, unsafe_allow_html=True)
 
-        # ROI bar chart
-        if "Net_ROI_USD" in log.columns and "Version" in log.columns:
+        if "Net_ROI_USD" in log.columns:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("#### Net ROI by Version")
-            colors = ["#22D3EE" if champion_version in str(v) else "#1E3A5F"
-                      for v in log["Version"]]
+            colors = ["#F59E0B" if champion_version in str(v) else "#1E3A5F" for v in log["Version"]]
             fig_bar = go.Figure(go.Bar(
-                x=log["Version"],
-                y=log["Net_ROI_USD"],
+                x=log["Version"], y=log["Net_ROI_USD"],
                 marker_color=colors,
                 text=[f"${v:,.0f}" for v in log["Net_ROI_USD"]],
-                textposition="outside",
-                textfont=dict(color="#94A3B8", size=11)
+                textposition="outside", textfont=dict(color="#94A3B8", size=11)
             ))
             fig_bar.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#94A3B8", family="Syne"),
                 xaxis=dict(showgrid=False, color="#475569"),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.04)",
-                           color="#475569"),
-                margin=dict(l=20, r=20, t=30, b=20),
-                height=260,
-                showlegend=False
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.04)", color="#475569"),
+                margin=dict(l=20, r=20, t=30, b=20), height=260, showlegend=False
             )
             st.plotly_chart(fig_bar, use_container_width=True)
     else:
         st.info("No experiment_tracking_v3.csv found. Run the V3 training notebook to populate the log.")
 
-    # ── Fraud pattern heatmap ──
+    # ── Fraud heatmap ──
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### 🕐 Fraud Rate by Hour of Day")
-    st.caption("Built from the IS_NIGHT and Hour_of_Day features engineered in V3. Shows why night-time transactions carry higher risk.")
+    st.caption("Shows why the IS_NIGHT feature was engineered — fraud spikes during the night window.")
 
     if dataset is not None:
         heatmap_data = dataset.copy()
-        # Engineer Hour_of_Day on the raw dataset
         if "Time" in heatmap_data.columns:
             heatmap_data["Hour_of_Day"] = (heatmap_data["Time"] // 3600) % 24
         if "Hour_of_Day" in heatmap_data.columns and "Class" in heatmap_data.columns:
             hourly = heatmap_data.groupby("Hour_of_Day").agg(
-                total=("Class", "count"),
-                fraud=("Class", "sum")
+                total=("Class", "count"), fraud=("Class", "sum")
             ).reset_index()
             hourly["fraud_rate"] = hourly["fraud"] / hourly["total"] * 100
-
-            bar_colors = [
-                "#F43F5E" if (h <= 6 or h >= 23) else "#22D3EE"
-                for h in hourly["Hour_of_Day"]
-            ]
-
+            bar_colors = ["#F43F5E" if (h <= 6 or h >= 23) else "#22D3EE" for h in hourly["Hour_of_Day"]]
             fig_heat = go.Figure(go.Bar(
-                x=hourly["Hour_of_Day"],
-                y=hourly["fraud_rate"],
+                x=hourly["Hour_of_Day"], y=hourly["fraud_rate"],
                 marker=dict(color=bar_colors, opacity=0.85, line=dict(width=0)),
                 text=[f"{v:.2f}%" for v in hourly["fraud_rate"]],
-                textposition="outside",
-                textfont=dict(color="#94A3B8", size=9),
+                textposition="outside", textfont=dict(color="#94A3B8", size=9),
             ))
-            fig_heat.add_vrect(
-                x0=-0.5, x1=6.5,
-                fillcolor="rgba(244,63,94,0.06)",
-                line_width=0,
-                annotation_text="IS_NIGHT",
-                annotation_position="top left",
-                annotation_font=dict(color="#F43F5E", size=10)
-            )
-            fig_heat.add_vrect(
-                x0=22.5, x1=23.5,
-                fillcolor="rgba(244,63,94,0.06)",
-                line_width=0,
-            )
+            fig_heat.add_vrect(x0=-0.5, x1=6.5, fillcolor="rgba(244,63,94,0.06)", line_width=0,
+                annotation_text="IS_NIGHT", annotation_position="top left",
+                annotation_font=dict(color="#F43F5E", size=10))
+            fig_heat.add_vrect(x0=22.5, x1=23.5, fillcolor="rgba(244,63,94,0.06)", line_width=0)
             fig_heat.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#94A3B8", family="Syne"),
-                xaxis=dict(
-                    title="Hour of Day (0–23)",
-                    showgrid=False,
-                    color="#475569",
-                    dtick=1,
-                    tickfont=dict(size=10)
-                ),
-                yaxis=dict(
-                    title="Fraud Rate (%)",
-                    showgrid=True,
-                    gridcolor="rgba(255,255,255,0.05)",
-                    color="#475569"
-                ),
-                margin=dict(l=20, r=20, t=30, b=20),
-                height=280,
-                showlegend=False,
+                xaxis=dict(title="Hour of Day (0–23)", showgrid=False, color="#475569", dtick=1, tickfont=dict(size=10)),
+                yaxis=dict(title="Fraud Rate (%)", showgrid=True, gridcolor="rgba(255,255,255,0.05)", color="#475569"),
+                margin=dict(l=20, r=20, t=30, b=20), height=280, showlegend=False,
             )
             st.plotly_chart(fig_heat, use_container_width=True)
-            st.markdown(
-                '<div style="display:flex;gap:20px;margin-top:2px;">'
-                '<span style="color:#F43F5E;font-size:0.72rem;">● IS_NIGHT window (11pm–6am)</span>'
-                '<span style="color:#22D3EE;font-size:0.72rem;">● Daytime hours</span>'
-                '</div>',
-                unsafe_allow_html=True
-            )
     else:
         st.caption("Dataset not loaded — heatmap unavailable.")
 
-    # ── Version comparison ──
+    # ── Version cards ──
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### Version Evolution")
     v1, v2, v3 = st.columns(3)
     versions = [
-        ("V1 · RANDOM FOREST", "#3B82F6", [
-            "Random Forest (100 trees)",
-            "No feature engineering",
-            "SMOTE comparison tested",
-            "GridSearchCV tuning",
-            "AUPRC: 0.8016",
-        ]),
-        ("V2 · XGBOOST BASELINE", "#8B5CF6", [
-            "XGBoost replaces RF",
-            "scale_pos_weight vs SMOTE",
-            "log_amount + Hour_of_Day",
-            "IS_NIGHT feature",
-            "AUPRC: ~0.81",
-        ]),
-        ("V3 · MLOPS EDITION", "#22D3EE", [
-            "AMOUNT_TIER feature added",
-            "Early stopping wired up",
-            "Experiment tracker (CSV)",
-            "3-guardrail health check",
-            "Champion registry (JSON)",
-            "AUPRC: 0.8427 ← champion",
-        ]),
+        ("V1 · RANDOM FOREST", "#3B82F6", ["Random Forest (100 trees)", "No feature engineering", "SMOTE comparison tested", "GridSearchCV tuning", "AUPRC: 0.8016"]),
+        ("V2 · XGBOOST BASELINE", "#8B5CF6", ["XGBoost replaces RF", "scale_pos_weight vs SMOTE", "log_amount + Hour_of_Day", "IS_NIGHT feature", "AUPRC: ~0.81"]),
+        ("V3 · MLOPS EDITION", "#F59E0B", ["AMOUNT_TIER feature added", "Early stopping wired up", "Experiment tracker (CSV)", "3-guardrail health check", "Champion registry (JSON)", "AUPRC: 0.8427 ← champion"]),
     ]
     for col, (title, color, points) in zip([v1, v2, v3], versions):
         with col:
             bullet_html = "".join(f'<div style="font-size:0.8rem;color:#94A3B8;padding:3px 0;">• {p}</div>' for p in points)
             st.markdown(f"""
             <div class="glass" style="border-top: 2px solid {color}; min-height: 200px;">
-                <div style="font-family:Orbitron,sans-serif;font-size:0.75rem;
-                            color:{color};letter-spacing:1.5px;margin-bottom:12px;">{title}</div>
+                <div style="font-family:Orbitron,sans-serif;font-size:0.75rem;color:{color};letter-spacing:1.5px;margin-bottom:12px;">{title}</div>
                 {bullet_html}
             </div>
             """, unsafe_allow_html=True)
