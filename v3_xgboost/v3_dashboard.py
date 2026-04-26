@@ -356,8 +356,8 @@ elif page == "📡 LIVE MONITOR":
     m1, m2, m3, m4 = st.columns(4)
     metrics = [
         ("AUPRC Score",   "0.8427", "V3 Champion"),
-        ("Fraud Recall",  "74.7%",  "At threshold 0.5"),
-        ("Precision",     "99.0%",  "False alarm rate: 0.002%"),
+        ("Fraud Recall",  "77.9%",  "At threshold 0.5"),
+        ("Precision",     "80.0%",  "False alarm rate: 0.002%"),
         ("System Status", "ONLINE", "● Latency: 8ms (Simulated)"),
     ]
     for col, (label, value, sub) in zip([m1, m2, m3, m4], metrics):
