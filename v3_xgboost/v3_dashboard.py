@@ -223,33 +223,94 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
 
 # ── LOAD RESOURCES ────────────────────────────────────────────────────────────
 @st.cache_resource
+
 def load_resources():
+
     model = scaler = df = None
+
     error = None
+
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+
     # V3 champion model
+
     model_path  = os.path.join("registered_models", "v3_xgb_20260421_0024.joblib")
+
     scaler_path = os.path.join("registered_models", "v3_scaler_20260421_0024.joblib")
 
+
+
     # Fallback: check model_registry.json
+
     registry_path = os.path.join(BASE_DIR, "model_registry.json")
 
+
+
     if not os.path.exists(model_path) and os.path.exists("model_registry.json"):
+
         with open("model_registry.json") as f:
+
             reg = json.load(f)
+
         model_path  = reg.get("model_path", model_path)
+
         scaler_path = reg.get("scaler_path", scaler_path)
 
+
+
     if os.path.exists(model_path):
+
         model = joblib.load(model_path)
+
     else:
+
         error = f"Model not found at {model_path}"
 
+
+
     if os.path.exists(scaler_path):
+
         scaler = joblib.load(scaler_path)
+
         
+
         #Load raw CSV
+
+        from sklearn.model_selection import train_test_split
+
+    RAW_CSV = os.path.join(BASE_DIR, "creditcard.csv")
+
+    if os.path.exists(RAW_CSV):
+
+        raw = pd.read_csv(RAW_CSV)
+
+        subset = [c for c in raw.columns if c not in ["Time", "Class"]]
+
+        raw.drop_duplicates(subset=subset, inplace=True)
+
+        _, df, _, _ = train_test_split(
+
+            raw, raw["Class"],
+
+            test_size=0.20,
+
+            random_state=42,
+
+            stratify=raw["Class"]
+
+        )
+
+        df = df.reset_index(drop=True)
+
+    else:
+
+        error = "creditcard.csv not found"
+
+
+
+    return model, scaler, df, error
         
 
     # Test dataset
