@@ -226,12 +226,15 @@ h1,h2,h3 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; }
 def load_resources():
     model = scaler = df = None
     error = None
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     # V3 champion model
     model_path  = os.path.join("registered_models", "v3_xgb_20260421_0024.joblib")
     scaler_path = os.path.join("registered_models", "v3_scaler_20260421_0024.joblib")
 
     # Fallback: check model_registry.json
+    registry_path = os.path.join(BASE_DIR, "model_registry.json")
+
     if not os.path.exists(model_path) and os.path.exists("model_registry.json"):
         with open("model_registry.json") as f:
             reg = json.load(f)
@@ -245,6 +248,9 @@ def load_resources():
 
     if os.path.exists(scaler_path):
         scaler = joblib.load(scaler_path)
+        
+        #Load raw CSV
+        
 
     # Test dataset
       # Load raw CSV and recreate same test split as notebook
