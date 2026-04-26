@@ -276,42 +276,30 @@ def load_resources():
 
         
 
-        #Load raw CSV
+         # Load raw CSV
 
-        from sklearn.model_selection import train_test_split
+    from sklearn.model_selection import train_test_split
 
     RAW_CSV = os.path.join(BASE_DIR, "creditcard.csv")
-
-    if os.path.exists(RAW_CSV):
-
-        raw = pd.read_csv(RAW_CSV)
-
-        subset = [c for c in raw.columns if c not in ["Time", "Class"]]
-
-        raw.drop_duplicates(subset=subset, inplace=True)
-
-        _, df, _, _ = train_test_split(
-
-            raw, raw["Class"],
-
-            test_size=0.20,
-
-            random_state=42,
-
-            stratify=raw["Class"]
-
-        )
-
-        df = df.reset_index(drop=True)
-
-    else:
-
-        error = "creditcard.csv not found"
-
-
-
-    return model, scaler, df, error
-        
+    
+    try:
+        if os.path.exists(RAW_CSV):
+            raw = pd.read_csv(RAW_CSV)
+            subset = [c for c in raw.columns if c not in ["Time", "Class"]]
+            raw.drop_duplicates(subset=subset, inplace=True)
+            _, df, _, _ = train_test_split(
+                raw, raw["Class"],
+                test_size=0.20,
+                random_state=42,
+                stratify=raw["Class"]
+            )
+            df = df.reset_index(drop=True)
+        else:
+            error = "creditcard.csv not found"
+            df = None
+    except Exception as e:
+        error = f"Dataset error: {str(e)}"
+        df = None
 
     # Test dataset
       # Load raw CSV and recreate same test split as notebook
