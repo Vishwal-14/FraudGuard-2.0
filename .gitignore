@@ -1,0 +1,28 @@
+# Dataset — too large for GitHub (150MB)
+creditcard.csv
+
+# Jupyter
+.ipynb_checkpoints/
+.jupyter/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Environment
+.env
+.venv
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Streamlit
+.streamlit/secrets.toml

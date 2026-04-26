@@ -1,0 +1,4 @@
+Timestamp,Version,n_estimators,max_depth,learning_rate,subsample,colsample_bytree,Threshold,AUPRC,Recall,FP_Rate,True_Positives,False_Positives,False_Negatives,Amount_Saved_USD,Net_ROI_USD,Health_Status
+2026-04-21 17:25:20,XGBoost_V3.0,426,6,0.05,0.8,0.8,0.5,0.8404,0.7789,0.000345,74,19,21,10185.73,10090.73,HEALTHY
+2026-04-15 14:00:00,XGBoost_V2.0_Baseline,200,5,0.05,,,0.5,0.8044,0.8,0.000818,76,45,19,10187.0,9962.0,HEALTHY
+2026-04-15 14:00:00,random_forest,100,20,N/A,N/A,N/A,0.5,0.8016,0.7474,2e-05,71,1,24,10714.0,10709.0,HEALTHY

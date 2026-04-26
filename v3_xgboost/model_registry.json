@@ -1,0 +1,9 @@
+{
+  "champion_version": "V3_20260421_0024",
+  "best_auprc": 0.8427,
+  "threshold": 0.5,
+  "model_path": "registered_models/v3_xgb_20260421_0024.joblib",
+  "scaler_path": "registered_models/v3_scaler_20260421_0024.joblib",
+  "registered_at": "2026-04-21 00:24:53",
+  "net_roi": 10095.73
+}
