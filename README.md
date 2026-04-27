@@ -10,7 +10,7 @@ fraudguard-fraud-detection/
 │
 ├── v1_random_forest/          # Baseline — Random Forest + SMOTE comparison
 ├── v2_xgboost_baseline/       # Upgrade — XGBoost + first feature engineering
-├── v3_mlops/                  # Final — XGBoost + full MLOps pipeline
+├── v3_xgboost/                  # Final — XGBoost + new feauture engineered + light MLOps pipeline
 │   ├── v3_xgboost_model.ipynb
 │   ├── experiment_tracking_v3.csv
 │   ├── model_registry.json
@@ -36,7 +36,7 @@ Replaced Random Forest with XGBoost and introduced the first feature engineering
 - **Key finding:** `scale_pos_weight` at the raw class ratio (582) caused the model to peak at iteration 4 due to aggressive early overfitting. Required careful tuning.
 - **AUPRC:** ~0.81
 
-### V3 — MLOps Edition ← Current Champion
+### V3- XGBOOST UPDATED  ← Current Champion
 Added a fourth engineered feature, fixed the training pipeline, and built full MLOps infrastructure around the model.
 
 - **Algorithm:** XGBoost with early stopping (eval_set wired correctly)
@@ -48,16 +48,11 @@ Added a fourth engineered feature, fixed the training pipeline, and built full M
 
 ## 🧬 MLOps Pipeline
 
-Every training run in V3 follows this automated flow:
+The V3 training process follows this automated flow:
 
-```
-Load & Clean → Feature Engineering → Train XGBoost → Guardrail Checks → Register if Champion → Log to Tracker
-```
+`Train XGBoost → Guardrail Checks → Register if Champion → Log Run Data`
 
-**Guardrails** — a model is rejected and never registered if:
-- AUPRC < 0.75
-- Recall < 70%
-- False Positive Rate > 0.5%
+While data prep is done manually in the notebook, everything after training is automated. The system evaluates the model's health, blocks bad models from being registered, and writes the experiment details to the tracker.
 
 **Champion Registry** — `model_registry.json` always points to the best model seen so far. The serving layer loads from the registry, not from whatever happens to be in memory.
 
@@ -101,7 +96,7 @@ cd v3_mlops
 streamlit run v3_dashboard.py
 ```
 
-> **Note:** Place `creditcard.csv` from [Kaggle](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) in the `v3_mlops/` directory before running.
+> **Note:** Place `creditcard.csv` from [Kaggle](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) in the `v3_xgboost/` directory before running.
 
 ---
 
@@ -134,7 +129,7 @@ Not included due to file size. Download from: https://www.kaggle.com/datasets/ml
 pip install xgboost scikit-learn pandas numpy streamlit plotly joblib imbalanced-learn
 ```
 
-Run notebooks in order: `v1_random_forest` → `v2_xgboost_baseline` → `v3_mlops`
+Run notebooks in order: `v1_random_forest` → `v2_xgboost_baseline` → `v3_xgboost`
 
 ---
 
