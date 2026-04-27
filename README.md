@@ -2,6 +2,8 @@
 
 A three-version machine learning project that evolves from a baseline Random Forest classifier to a production-style XGBoost pipeline with experiment tracking, health guardrails, and a champion model registry.
 
+**🚀 Live Dashboard:** [https://vishwal-14-fraudguard-2-0-v3-xgboostv3-dashboard-fprmw4.streamlit.app/]
+
 The goal was not just to build a model — but to build the infrastructure around a model that lets you iterate safely, compare versions objectively, and deploy with confidence.
 
 ## 🗂️ Project Structure
