@@ -152,7 +152,7 @@ def load_resources():
     model_path    = BASE_DIR / "registered_models" / "v3_xgb_20260421_0024.joblib"
     scaler_path   = BASE_DIR / "registered_models" / "v3_scaler_20260421_0024.joblib"
     registry_path = BASE_DIR / "model_registry.json"
-    RAW_CSV       = BASE_DIR / "creditcard.csv"
+    RAW_CSV       = BASE_DIR / "creditcard_original.csv"
 
     # Fallback to registry if default model path doesn't exist
     if not model_path.exists() and registry_path.exists():
