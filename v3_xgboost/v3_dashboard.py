@@ -410,13 +410,16 @@ elif page == "📡 LIVE MONITOR":
 
             if is_fraud:
                 st.markdown('<p class="status-fraud">🚨 FRAUD DETECTED</p>', unsafe_allow_html=True)
-                st.markdown(f"**Risk Score:** <span style='color:#F43F5E;font-size:1.4rem;'>{prob_fraud:.1%}</span>", unsafe_allow_html=True)
+                # Changed from .1% to .6f for high precision
+                st.markdown(f"**Risk Score:** <span style='color:#F43F5E;font-size:1.4rem;'>{prob_fraud * 100:.6f}%</span>", unsafe_allow_html=True)
+                st.caption(f"Raw Model Output: {prob_fraud:.10f}") # Absolute raw value
                 st.error("Action Required: Transaction Blocked. Flagged for manual review.")
             else:
                 st.markdown('<p class="status-safe">✅ TRANSACTION SAFE</p>', unsafe_allow_html=True)
-                st.markdown(f"**Safety Score:** <span style='color:#10B981;font-size:1.4rem;'>{(1-prob_fraud):.1%}</span>", unsafe_allow_html=True)
+                # High precision safety score
+                st.markdown(f"**Safety Score:** <span style='color:#10B981;font-size:1.4rem;'>{(1-prob_fraud) * 100:.6f}%</span>", unsafe_allow_html=True)
+                st.caption(f"Raw Model Output: {prob_fraud:.10f}") # Absolute raw value
                 st.success("Action: Transaction Approved.")
-
             match = (is_fraud and actual == 1) or (not is_fraud and actual == 0)
             if match:
                 st.caption(f"✓ Verified Match (Historical: {'Fraud' if actual == 1 else 'Normal'})")
